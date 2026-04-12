@@ -1,10 +1,18 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+# Virtual Environment
+objenv/
+venv/
+env/
+.venv/
 
-# Virtual environments
-.venv
+# Dataset (very important)
+sdss_data/astro_dataset_maxia/
+
+# Logs
+*.csv
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Notebook checkpoints
+.ipynb_checkpoints/

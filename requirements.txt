@@ -10,3 +10,10 @@ xgboost
 shap
 imblearn
 tensorflow
+streamlit
+joblib
+Pillow
+plotly
+speechrecognition
+wikipedia
+requests

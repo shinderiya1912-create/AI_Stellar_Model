@@ -5,64 +5,82 @@ import joblib
 from PIL import Image
 import base64
 import os
-import requests
 import tensorflow as tf
-import plotly.graph_objects as go
-import speech_recognition as sr
-import requests
 import matplotlib.pyplot as plt
-from datetime import datetime   # ⭐ ADDED
+import shap
+import json
 
 # -------------------------------
-# PAGE CONFIG (MUST BE FIRST)
+# PAGE CONFIG
 # -------------------------------
-st.set_page_config(page_title="Stellar AI System", layout="wide")
+
+st.set_page_config(
+    page_title="Stellar AI System",
+    layout="wide"
+)
 
 # -------------------------------
 # LOAD MODELS
 # -------------------------------
+
 def load_file(file):
+
     if os.path.exists(file):
         return joblib.load(file)
+
     else:
         st.error(f"❌ Missing file: {file}")
         st.stop()
+
 
 model = load_file("stellar_rf_model.pkl")
 scaler = load_file("scaler.pkl")
 le = load_file("label_encoder.pkl")
 
-import shap
-
-# Create SHAP explainer once
 explainer = shap.TreeExplainer(model)
 
-# CNN SAFE LOAD
+# -------------------------------
+# LOAD CNN MODEL
+# -------------------------------
+
 cnn_model = None
+
 try:
+
     if os.path.exists("cnn_model.h5"):
-        cnn_model = tf.keras.models.load_model("cnn_model.h5")
+
+        cnn_model = tf.keras.models.load_model(
+            "cnn_model.h5"
+        )
+
 except Exception as e:
+
     st.warning(f"CNN load failed: {e}")
 
 # -------------------------------
-# BACKGROUND
+# BACKGROUND IMAGE
 # -------------------------------
+
 def set_bg_image(image_file):
+
     if os.path.exists(image_file):
+
         with open(image_file, "rb") as f:
-            encoded = base64.b64encode(f.read()).decode()
+
+            encoded = base64.b64encode(
+                f.read()
+            ).decode()
 
         st.markdown(f"""
         <style>
         .stApp {{
-            background: linear-gradient(rgba(0,0,20,0.9), rgba(0,0,20,0.95)),
-                        url("data:image/png;base64,{encoded}");
+            background:
+            linear-gradient(
+                rgba(0,0,20,0.9),
+                rgba(0,0,20,0.95)
+            ),
+            url("data:image/png;base64,{encoded}");
             background-size: cover;
-            color: white;
-        }}
-        h1, h2, h3 {{
-            text-shadow: 0px 0px 10px cyan;
         }}
         </style>
         """, unsafe_allow_html=True)
@@ -72,101 +90,119 @@ set_bg_image("space_background.png")
 # -------------------------------
 # TITLE
 # -------------------------------
+
 st.title("🌌 Stellar AI System")
 
 # -------------------------------
 # SIDEBAR
 # -------------------------------
+
 st.sidebar.title("🛰️ Control Panel")
 
 option = st.sidebar.radio(
+
     "Choose Mode",
-    ["Manual Input", "Upload Image", "Chatbot", "Explore More"]
+
+    [
+        "Manual Input",
+        "Upload Image",
+    ]
 )
 
-if option == "Explore More":
-    st.switch_page("pages/explore_more.py")
+# -------------------------------
+# OBJECT INFORMATION
+# -------------------------------
+
+object_info = {
+
+"galaxy":
+"A galaxy is a massive system of billions of stars, gas, dust, and dark matter bound together by gravity.",
+
+"black_hole":
+"A black hole is a region in space where gravity is extremely strong.",
+
+"mars":
+"Mars is the fourth planet from the Sun and is known as the Red Planet.",
+
+"jupiter":
+"Jupiter is the largest planet in the solar system.",
+
+"saturn":
+"Saturn is famous for its large ring system.",
+
+"earth":
+"Earth is the third planet from the Sun and supports life.",
+
+"venus":
+"Venus has extremely high surface temperatures.",
+
+"neptune":
+"Neptune is a distant ice giant.",
+
+"uranus":
+"Uranus rotates on its side.",
+
+"mercury":
+"Mercury is closest to the Sun.",
+
+"asteroid":
+"A small rocky object orbiting the Sun.",
+
+"nebula":
+"A large cloud of gas and dust in space."
+
+}
 
 # -------------------------------
-# NASA APOD  ⭐ UPDATED FUNCTION
+# FEATURE MEANINGS
 # -------------------------------
-def get_nasa_apod():
 
-    try:
-        url = "https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
+feature_meaning = {
 
-        r = requests.get(url, timeout=5)
+"u": "Ultraviolet band magnitude",
+"g": "Green band magnitude",
+"r": "Red band magnitude",
+"i": "Near-infrared band magnitude",
+"z": "Redshift — indicates distance",
+"redshift": "Velocity and distance indicator",
+"ra": "Right Ascension",
+"dec": "Declination",
+"cam_col": "Camera column used",
+"field_ID": "Field number",
+"run_ID": "Observation run ID",
+"fiber_ID": "Fiber ID",
+"spec_obj_ID": "Spectral object ID"
 
-        if r.status_code == 200:
-
-            data = r.json()
-
-            # ⭐ GET CURRENT DATE & TIME
-            now = datetime.now()
-
-            today_date = now.strftime("%Y-%m-%d")
-            current_time = now.strftime("%H:%M:%S")
-
-            # ⭐ PREPARE RECORD
-            record = {
-                "Date": today_date,
-                "Time": current_time,
-                "Title": data.get("title", ""),
-                "Image_URL": data.get("url", "")
-            }
-
-            file_name = "nasa_apod_log.csv"
-
-            df_new = pd.DataFrame([record])
-
-            # ⭐ SAVE TO CSV
-            if os.path.exists(file_name):
-
-                df_old = pd.read_csv(file_name)
-
-                df_all = pd.concat(
-                    [df_old, df_new],
-                    ignore_index=True
-                )
-
-            else:
-
-                df_all = df_new
-
-            df_all.to_csv(file_name, index=False)
-
-            return data
-
-    except:
-        return None
+}
 
 # -------------------------------
-# VOICE INPUT
+# RECOMMENDATIONS
 # -------------------------------
-def voice_input():
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.info("🎙️ Speak now...")
-        audio = r.listen(source)
 
-    try:
-        text = r.recognize_google(audio)
-        return text
-    except:
-        return "Voice not recognized"
+recommendations = {
+
+"GALAXY":
+"This object is likely a galaxy. Further observation recommended.",
+
+"STAR":
+"This object appears to be a star.",
+
+"QSO":
+"This object may be a quasar candidate."
+
+}
 
 # -------------------------------
-# MANUAL INPUT WITH SHAP
+# MANUAL INPUT
 # -------------------------------
+
 if option == "Manual Input":
 
     st.subheader("🔢 Enter Features")
 
-    try:
-        features = list(scaler.feature_names_in_)
-    except:
-        st.error("Scaler missing feature names.")
-        st.stop()
+    features = list(
+        scaler.feature_names_in_
+    )
 
     input_data = []
 
@@ -193,40 +229,175 @@ if option == "Manual Input":
 
         result = le.inverse_transform(pred)[0]
 
-        st.success(f"🌟 Predicted Class: {result}")
+        proba = model.predict_proba(scaled)
 
-        st.subheader("🔍 Why this prediction? (SHAP Explanation)")
+        confidence = np.max(proba) * 100
+
+        st.success(
+            f"🌟 Predicted Class: {result}"
+        )
+
+        st.write(
+            f"📊 Confidence: {confidence:.2f}%"
+        )
+
+        # Reliability
+
+        if confidence > 85:
+
+            st.success("✅ High confidence prediction")
+
+        elif confidence > 60:
+
+            st.warning("⚠️ Moderate confidence prediction")
+
+        else:
+
+            st.error("❌ Low confidence prediction")
+
+        # Probability Chart
+
+        prob_df = pd.DataFrame({
+
+            "Class": le.classes_,
+            "Probability": proba[0]
+
+        })
+
+        st.subheader(
+            "📊 Class Probability Distribution"
+        )
+
+        st.bar_chart(
+            prob_df.set_index("Class")
+        )
+
+        # Input Summary
+
+        st.subheader("📋 Input Summary")
+
+        st.dataframe(df)
+
+        # -------------------------------
+        # SHAP
+        # -------------------------------
+
+        st.subheader(
+            "🧠 Feature Contribution Analysis"
+        )
 
         try:
 
-            shap_values = explainer.shap_values(scaled)
-
-            shap_df = pd.DataFrame(
-                shap_values[0],
-                columns=features
+            shap_values = explainer.shap_values(
+                scaled
             )
 
-            fig, ax = plt.subplots(figsize=(10,6))
+            shap_array = np.array(
+                shap_values
+            ).reshape(-1)[:len(features)]
 
-            shap_df.T.plot.barh(
-                ax=ax
+            shap_df = pd.DataFrame({
+
+                "Feature": features,
+                "Contribution": shap_array
+
+            })
+
+            shap_df = shap_df.sort_values(
+
+                by="Contribution",
+                key=abs,
+                ascending=False
+
             )
 
-            ax.set_title("Feature Contribution to Prediction")
+            fig, ax = plt.subplots()
+
+            ax.barh(
+                shap_df["Feature"],
+                shap_df["Contribution"]
+            )
+
+            ax.invert_yaxis()
 
             st.pyplot(fig)
 
+            # Top Features
+
+            st.subheader(
+                "📖 Top Influencing Features"
+            )
+
+            top_features = shap_df.head(5)
+
+            for _, row in top_features.iterrows():
+
+                direction = (
+
+                    "increased"
+                    if row["Contribution"] > 0
+                    else "decreased"
+
+                )
+
+                st.write(
+
+                    f"• **{row['Feature']}** "
+                    f"{direction} prediction confidence."
+
+                )
+
+            # Feature Meaning
+
+            st.subheader("📖 Feature Meaning")
+
+            for f in top_features["Feature"]:
+
+                meaning = feature_meaning.get(
+                    f,
+                    "No description available."
+                )
+
+                st.write(
+                    f"🔹 **{f}** → {meaning}"
+                )
+
         except Exception as e:
 
-            st.warning("⚠️ SHAP explanation not available.")
+            st.warning("SHAP explanation failed")
             st.write(e)
 
+        # Recommendation
+
+        rec = recommendations.get(
+            result.upper(),
+            "No recommendation available."
+        )
+
+        st.info(f"💡 Recommendation: {rec}")
+
 # -------------------------------
-# IMAGE UPLOAD + CNN
+# IMAGE UPLOAD
 # -------------------------------
+
 if option == "Upload Image":
 
     st.subheader("🖼️ Upload Space Image")
+
+    if os.path.exists("class_names.json"):
+
+        with open(
+            "class_names.json",
+            "r"
+        ) as f:
+
+            class_names = json.load(f)
+
+    else:
+
+        class_names = list(
+            object_info.keys()
+        )
 
     img_file = st.file_uploader(
         "Upload Image",
@@ -237,107 +408,108 @@ if option == "Upload Image":
 
         image = Image.open(img_file)
 
-        st.image(image)
+        st.image(
+            image,
+            caption="Uploaded Image",
+            width=300
+        )
 
         if cnn_model:
 
-            img = image.resize((128,128))
+            try:
 
-            img = np.array(img)/255.0
+                img = image.resize((224,224))
 
-            img = np.expand_dims(img, axis=0)
+                img = np.array(img)
 
-            pred = cnn_model.predict(img)
+                if img.shape[-1] == 4:
 
-            class_names = ['GALAXY','STAR','QSO']
+                    img = img[:,:,:3]
 
-            result = class_names[np.argmax(pred)]
+                img = img / 255.0
 
-            confidence = np.max(pred)
+                img = np.expand_dims(
+                    img,
+                    axis=0
+                )
 
-            st.success(f"🌌 {result}")
+                pred = cnn_model.predict(img)
 
-            st.progress(float(confidence))
+                class_index = np.argmax(pred)
 
-# -------------------------------
-# REAL-TIME SPACE INFO
-# -------------------------------
-def get_space_info(query):
+                result = class_names[class_index]
 
-    try:
+                confidence = float(
+                    np.max(pred)
+                )
 
-        query = query.strip().replace(" ", "_")
+                st.success(
+                    f"🌌 Prediction: {result.upper()}"
+                )
 
-        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}"
+                st.write(
+                    f"Confidence: {confidence*100:.2f}%"
+                )
 
-        response = requests.get(url, timeout=5)
+                st.progress(confidence)
 
-        if response.status_code == 200:
+                # -----------------------
+                # WHAT IS THIS OBJECT
+                # -----------------------
 
-            data = response.json()
+                st.subheader(
+                    "📖 What is this object?"
+                )
 
-            if "extract" in data:
-                return data["extract"]
+                description = object_info.get(
+                    result.lower(),
+                    "Information not available."
+                )
 
-        return "❌ I couldn't find detailed information on that topic."
+                st.info(description)
 
-    except:
-        return "⚠️ Error retrieving information."
+                # -----------------------
+                # EXPLORE MORE
+                # -----------------------
 
-# -------------------------------
-# CHATBOT
-# -------------------------------
-if option == "Chatbot":
+                st.subheader("🔭 Explore More")
 
-    st.subheader("🤖 Space AI Assistant")
+                wiki_links = {
 
-    st.markdown(
-        "Ask anything about **space, stars, galaxies, planets, black holes, missions**, and more."
-    )
+                    "galaxy":
+                    "https://en.wikipedia.org/wiki/Galaxy",
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+                    "nebula":
+                    "https://en.wikipedia.org/wiki/Nebula",
 
-    user_input = st.text_input(
-        "💬 Ask something about space:"
-    )
+                    "mars":
+                    "https://en.wikipedia.org/wiki/Mars",
 
-    if st.button("🧹 Clear Chat"):
-        st.session_state.messages = []
+                    "jupiter":
+                    "https://en.wikipedia.org/wiki/Jupiter"
 
-    if st.button("🎙️ Voice Input"):
+                }
 
-        voice_text = voice_input()
+                if result.lower() in wiki_links:
 
-        if voice_text:
+                    st.markdown(
 
-            st.write("🎤 You said:", voice_text)
+                        f"🌐 Learn more: "
+                        f"[Click here]({wiki_links[result.lower()]})"
 
-            user_input = voice_text
+                    )
 
-    if user_input:
+            except Exception as e:
 
-        st.session_state.messages.append(
-            ("You", user_input)
-        )
-
-        response = get_space_info(user_input)
-
-        st.session_state.messages.append(
-            ("AI", response)
-        )
-
-    st.markdown("### 💬 Conversation")
-
-    for role, msg in st.session_state.messages:
-
-        if role == "You":
-            st.markdown(f"🧑 **You:** {msg}")
-        else:
-            st.markdown(f"🤖 **AI:** {msg}")
+                st.error("Prediction failed")
+                st.write(e)
 
 # -------------------------------
 # FOOTER
 # -------------------------------
+
 st.markdown("---")
-st.markdown("🚀 Built with AI + Streamlit")
+
+st.markdown(
+    "🚀 Built with AI + Streamlit"
+)

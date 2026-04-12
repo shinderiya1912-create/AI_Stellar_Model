@@ -167,83 +167,158 @@ elif explore_option == "⭐ Feature Importance Viewer":
     )
 
 # ==================================================
-# NASA APOD (FIXED + DATE SAVE)
+# NASA APOD (FULLY FIXED + SAFE LOGGING)
 # ==================================================
 elif explore_option == "🌍 NASA APOD":
 
+    import requests
+    from datetime import datetime, date
+
     st.header("🌍 NASA Astronomy Picture of the Day")
 
-    # ⭐ DATE INPUT FIXED
+    # ⭐ Prevent future date selection
     selected_date = st.date_input(
         "📅 Select Date",
-        datetime.today()
+        value=date.today(),
+        max_value=date.today()
     )
 
+    # NASA API URL
     url = "https://api.nasa.gov/planetary/apod"
 
     params = {
         "api_key": "DEMO_KEY",
-        "date": str(selected_date)
+        "date": selected_date.strftime("%Y-%m-%d")
     }
 
-    r = requests.get(url, params=params)
+    try:
 
-    if r.status_code == 200:
+        r = requests.get(
+            url,
+            params=params,
+            timeout=10
+        )
 
-        data = r.json()
+        if r.status_code == 200:
 
-        st.subheader(data["title"])
+            data = r.json()
 
-        if data["media_type"] == "image":
+            st.subheader(data.get("title", "NASA APOD"))
 
-            st.image(
-                data["url"],
-                use_container_width=True
+            # ------------------------
+            # Show Image or Video
+            # ------------------------
+
+            if data.get("media_type") == "image":
+
+                st.image(
+                    data.get("url"),
+                    use_container_width=True
+                )
+
+            elif data.get("media_type") == "video":
+
+                st.video(
+                    data.get("url")
+                )
+
+            # ------------------------
+            # Explanation
+            # ------------------------
+
+            st.markdown("### 📖 Explanation")
+
+            st.write(
+                data.get("explanation", "")
             )
 
-        elif data["media_type"] == "video":
+            # ------------------------
+            # Save Log File
+            # ------------------------
 
-            st.video(data["url"])
+            now = datetime.now()
 
-        st.write(data["explanation"])
+            record = {
 
-        # ⭐ SAVE DATE + TIME
-        now = datetime.now()
+                "Selected_Date":
+                selected_date.strftime("%Y-%m-%d"),
 
-        record = {
-            "Selected_Date": str(selected_date),
-            "Fetched_Time": now.strftime("%H:%M:%S"),
-            "Title": data.get("title", ""),
-            "Image_URL": data.get("url", "")
-        }
+                "Fetched_Time":
+                now.strftime("%H:%M:%S"),
 
-        file_name = "nasa_apod_log.csv"
+                "Title":
+                data.get("title", ""),
 
-        df_new = pd.DataFrame([record])
+                "Image_URL":
+                data.get("url", "")
 
-        if os.path.exists(file_name):
+            }
 
-            df_old = pd.read_csv(file_name)
+            file_name = "nasa_apod_log.csv"
 
-            df_all = pd.concat(
-                [df_old, df_new],
-                ignore_index=True
+            df_new = pd.DataFrame([record])
+
+            # Append safely
+            if os.path.exists(file_name):
+
+                df_old = pd.read_csv(file_name)
+
+                # Avoid duplicate entries
+                if not (
+                    (df_old["Selected_Date"]
+                     == record["Selected_Date"])
+                    &
+                    (df_old["Title"]
+                     == record["Title"])
+                ).any():
+
+                    df_all = pd.concat(
+                        [df_old, df_new],
+                        ignore_index=True
+                    )
+
+                else:
+
+                    df_all = df_old
+
+            else:
+
+                df_all = df_new
+
+            df_all.to_csv(
+                file_name,
+                index=False
+            )
+
+            st.success(
+                "✅ APOD Saved to Log File"
             )
 
         else:
 
-            df_all = df_new
+            st.error(
+                "❌ Failed to load APOD. Try another date."
+            )
 
-        df_all.to_csv(
-            file_name,
-            index=False
+    except requests.exceptions.Timeout:
+
+        st.error(
+            "⏱️ Request timed out. Check internet."
         )
 
-        st.success("✅ APOD Saved to Log File")
+    except requests.exceptions.ConnectionError:
 
-    else:
+        st.error(
+            "🌐 No internet connection."
+        )
 
-        st.error("❌ Failed to load APOD.")
+    except Exception as e:
+
+        st.error(
+            "❌ Unexpected error occurred."
+        )
+
+        st.write(e)
 
 # ==================================================
 # NASA LIVE NEWS
