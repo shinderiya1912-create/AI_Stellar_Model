@@ -384,6 +384,7 @@ if option == "Upload Image":
 
     st.subheader("🖼️ Upload Space Image")
 
+    # Load class names
     if os.path.exists("class_names.json"):
 
         with open(
@@ -406,7 +407,7 @@ if option == "Upload Image":
 
     if img_file:
 
-        image = Image.open(img_file)
+        image = Image.open(img_file).convert("RGB")
 
         st.image(
             image,
@@ -414,97 +415,176 @@ if option == "Upload Image":
             width=300
         )
 
-        if cnn_model:
+        # Check CNN model
+        if cnn_model is None:
+
+            st.error(
+                "❌ CNN model not loaded. "
+                "Make sure 'cnn_model.h5' exists."
+            )
+
+        else:
 
             try:
 
+                # -----------------------
+                # IMAGE PREPROCESS
+                # -----------------------
+
                 img = image.resize((224,224))
 
-                img = np.array(img)
+                img_array = np.array(img)
 
-                if img.shape[-1] == 4:
+                img_array = img_array / 255.0
 
-                    img = img[:,:,:3]
-
-                img = img / 255.0
-
-                img = np.expand_dims(
-                    img,
+                img_array = np.expand_dims(
+                    img_array,
                     axis=0
                 )
 
-                pred = cnn_model.predict(img)
+                # -----------------------
+                # PREDICT
+                # -----------------------
 
-                class_index = np.argmax(pred)
-
-                result = class_names[class_index]
+                pred = cnn_model.predict(
+                    img_array,
+                    verbose=0
+                )
 
                 confidence = float(
                     np.max(pred)
                 )
 
-                st.success(
-                    f"🌌 Prediction: {result.upper()}"
+                class_index = int(
+                    np.argmax(pred)
                 )
 
+                # Debug output
                 st.write(
-                    f"Confidence: {confidence*100:.2f}%"
+                    "🔍 Raw Prediction:",
+                    pred
                 )
 
-                st.progress(confidence)
-
                 # -----------------------
-                # WHAT IS THIS OBJECT
+                # UNKNOWN DETECTION
                 # -----------------------
 
-                st.subheader(
-                    "📖 What is this object?"
-                )
+                UNKNOWN_THRESHOLD = 0.50
 
-                description = object_info.get(
-                    result.lower(),
-                    "Information not available."
-                )
+                if confidence < UNKNOWN_THRESHOLD:
 
-                st.info(description)
-
-                # -----------------------
-                # EXPLORE MORE
-                # -----------------------
-
-                st.subheader("🔭 Explore More")
-
-                wiki_links = {
-
-                    "galaxy":
-                    "https://en.wikipedia.org/wiki/Galaxy",
-
-                    "nebula":
-                    "https://en.wikipedia.org/wiki/Nebula",
-
-                    "mars":
-                    "https://en.wikipedia.org/wiki/Mars",
-
-                    "jupiter":
-                    "https://en.wikipedia.org/wiki/Jupiter"
-
-                }
-
-                if result.lower() in wiki_links:
-
-                    st.markdown(
-
-                        f"🌐 Learn more: "
-                        f"[Click here]({wiki_links[result.lower()]})"
-
+                    st.error(
+                        "❌ Unknown Object Detected"
                     )
+
+                    st.warning(
+                        "Model confidence too low."
+                    )
+
+                else:
+
+                    result = class_names[
+                        class_index
+                    ]
+
+                    # -----------------------
+                    # RESULT DISPLAY
+                    # -----------------------
+
+                    st.success(
+                        f"🌌 Prediction: "
+                        f"{result.upper()}"
+                    )
+
+                    st.write(
+                        f"Confidence: "
+                        f"{confidence*100:.2f}%"
+                    )
+
+                    st.progress(confidence)
+
+                    # -----------------------
+                    # OBJECT INFO
+                    # -----------------------
+
+                    st.subheader(
+                        "📖 What is this object?"
+                    )
+
+                    description = object_info.get(
+                        result.lower(),
+                        "Information not available."
+                    )
+
+                    st.info(description)
+
+                    # -----------------------
+                    # TOP 3 PREDICTIONS
+                    # -----------------------
+
+                    st.subheader(
+                        "📊 Top Predictions"
+                    )
+
+                    top_indices = pred[0].argsort()[-3:][::-1]
+
+                    top_results = []
+
+                    for i in top_indices:
+
+                        top_results.append({
+
+                            "Class":
+                            class_names[i],
+
+                            "Confidence":
+                            float(pred[0][i])
+
+                        })
+
+                    top_df = pd.DataFrame(
+                        top_results
+                    )
+
+                    st.dataframe(top_df)
+
+                    # -----------------------
+                    # EXPLORE LINKS
+                    # -----------------------
+
+                    st.subheader("🔭 Explore More")
+
+                    wiki_links = {
+
+                        "galaxy":
+                        "https://en.wikipedia.org/wiki/Galaxy",
+
+                        "nebula":
+                        "https://en.wikipedia.org/wiki/Nebula",
+
+                        "mars":
+                        "https://en.wikipedia.org/wiki/Mars",
+
+                        "jupiter":
+                        "https://en.wikipedia.org/wiki/Jupiter"
+
+                    }
+
+                    if result.lower() in wiki_links:
+
+                        st.markdown(
+
+                            f"🌐 Learn more: "
+                            f"[Click here]"
+                            f"({wiki_links[result.lower()]})"
+
+                        )
 
             except Exception as e:
 
-                st.error("Prediction failed")
-                st.write(e)
+                st.error("❌ Prediction failed")
 
-# -------------------------------
+                st.write(e)# -------------------------------
 # FOOTER
 # -------------------------------
 
