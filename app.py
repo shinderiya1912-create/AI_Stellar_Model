@@ -33,10 +33,9 @@ def load_file(file):
         st.stop()
 
 
-model = load_file("stellar_rf_model.pkl")
-scaler = load_file("scaler.pkl")
-le = load_file("label_encoder.pkl")
-
+model = load_file("models/stellar_rf_model.pkl")
+scaler = load_file("models/scaler.pkl")
+le = load_file("models/label_encoder.pkl")
 explainer = shap.TreeExplainer(model)
 
 # -------------------------------
@@ -47,10 +46,10 @@ cnn_model = None
 
 try:
 
-    if os.path.exists("cnn_model.h5"):
+    if os.path.exists("models/cnn_model.h5"):
 
         cnn_model = tf.keras.models.load_model(
-            "cnn_model.h5"
+            "models/cnn_model.h5"
         )
 
 except Exception as e:
@@ -85,7 +84,7 @@ def set_bg_image(image_file):
         </style>
         """, unsafe_allow_html=True)
 
-set_bg_image("space_background.png")
+set_bg_image("assets/space_background.png")
 
 # -------------------------------
 # TITLE
@@ -385,10 +384,10 @@ if option == "Upload Image":
     st.subheader("🖼️ Upload Space Image")
 
     # Load class names
-    if os.path.exists("class_names.json"):
+    if os.path.exists("assets/class_names.json"):
 
         with open(
-            "class_names.json",
+            "assets/class_names.json",
             "r"
         ) as f:
 
