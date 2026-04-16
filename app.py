@@ -46,10 +46,10 @@ cnn_model = None
 
 try:
 
-    if os.path.exists("models/cnn_model.h5"):
+    if os.path.exists("sdss_data/cnn_model.h5"):
 
         cnn_model = tf.keras.models.load_model(
-            "models/cnn_model.h5"
+            "sdss_data/cnn_model.h5"
         )
 
 except Exception as e:
@@ -86,13 +86,14 @@ def set_bg_image(image_file):
 
 set_bg_image("assets/space_background.png")
 
+
 # -------------------------------
 # TITLE
 # -------------------------------
 
 st.title("🌌 Stellar AI System")
 
-# -------------------------------
+## -------------------------------
 # SIDEBAR
 # -------------------------------
 
@@ -376,18 +377,17 @@ if option == "Manual Input":
         st.info(f"💡 Recommendation: {rec}")
 
 # -------------------------------
-# IMAGE UPLOAD
+# IMAGE UPLOAD (FIXED)
 # -------------------------------
 
 if option == "Upload Image":
 
     st.subheader("🖼️ Upload Space Image")
 
-    # Load class names
-    if os.path.exists("assets/class_names.json"):
+    if os.path.exists("sdss_data/class_names.json"):
 
         with open(
-            "assets/class_names.json",
+            "sdss_data/class_names.json",
             "r"
         ) as f:
 
@@ -414,7 +414,6 @@ if option == "Upload Image":
             width=300
         )
 
-        # Check CNN model
         if cnn_model is None:
 
             st.error(
@@ -430,11 +429,17 @@ if option == "Upload Image":
                 # IMAGE PREPROCESS
                 # -----------------------
 
-                img = image.resize((224,224))
+                IMG_SIZE = 128
+
+                img = image.resize(
+                    (IMG_SIZE, IMG_SIZE)
+                )
 
                 img_array = np.array(img)
 
-                img_array = img_array / 255.0
+                img_array = img_array.astype(
+                    "float32"
+                ) / 255.0
 
                 img_array = np.expand_dims(
                     img_array,
@@ -458,16 +463,7 @@ if option == "Upload Image":
                     np.argmax(pred)
                 )
 
-                # Debug output
-                st.write(
-                    "🔍 Raw Prediction:",
-                    pred
-                )
-
-                # -----------------------
-                # UNKNOWN DETECTION
-                # -----------------------
-
+                
                 UNKNOWN_THRESHOLD = 0.50
 
                 if confidence < UNKNOWN_THRESHOLD:
@@ -486,10 +482,6 @@ if option == "Upload Image":
                         class_index
                     ]
 
-                    # -----------------------
-                    # RESULT DISPLAY
-                    # -----------------------
-
                     st.success(
                         f"🌌 Prediction: "
                         f"{result.upper()}"
@@ -502,88 +494,13 @@ if option == "Upload Image":
 
                     st.progress(confidence)
 
-                    # -----------------------
-                    # OBJECT INFO
-                    # -----------------------
-
-                    st.subheader(
-                        "📖 What is this object?"
-                    )
-
-                    description = object_info.get(
-                        result.lower(),
-                        "Information not available."
-                    )
-
-                    st.info(description)
-
-                    # -----------------------
-                    # TOP 3 PREDICTIONS
-                    # -----------------------
-
-                    st.subheader(
-                        "📊 Top Predictions"
-                    )
-
-                    top_indices = pred[0].argsort()[-3:][::-1]
-
-                    top_results = []
-
-                    for i in top_indices:
-
-                        top_results.append({
-
-                            "Class":
-                            class_names[i],
-
-                            "Confidence":
-                            float(pred[0][i])
-
-                        })
-
-                    top_df = pd.DataFrame(
-                        top_results
-                    )
-
-                    st.dataframe(top_df)
-
-                    # -----------------------
-                    # EXPLORE LINKS
-                    # -----------------------
-
-                    st.subheader("🔭 Explore More")
-
-                    wiki_links = {
-
-                        "galaxy":
-                        "https://en.wikipedia.org/wiki/Galaxy",
-
-                        "nebula":
-                        "https://en.wikipedia.org/wiki/Nebula",
-
-                        "mars":
-                        "https://en.wikipedia.org/wiki/Mars",
-
-                        "jupiter":
-                        "https://en.wikipedia.org/wiki/Jupiter"
-
-                    }
-
-                    if result.lower() in wiki_links:
-
-                        st.markdown(
-
-                            f"🌐 Learn more: "
-                            f"[Click here]"
-                            f"({wiki_links[result.lower()]})"
-
-                        )
-
             except Exception as e:
 
                 st.error("❌ Prediction failed")
 
-                st.write(e)# -------------------------------
+                st.write(e)
+
+# -------------------------------
 # FOOTER
 # -------------------------------
 

@@ -30,8 +30,8 @@ def load_file(file):
         st.error(f"❌ Missing file: {file}")
         st.stop()
 
-model = load_file("stellar_rf_model.pkl")
-scaler = load_file("scaler.pkl")
+model = load_file("models/stellar_rf_model.pkl")
+scaler = load_file("models/scaler.pkl")
 
 # -------------------------------
 # SIDEBAR MENU
